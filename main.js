@@ -19,8 +19,6 @@ async function MainInit()
     ShowError(`Unable to initialize renderer.`);
     return;
   }
-
-  // ShowError(`Renderer initialized`);
   try {
     main(rend);
   } catch(e) {
@@ -46,7 +44,6 @@ const vertices = new Float32Array([
 
 function main(rend)
 {
-  // ShowError("Main");
   const shSrcPack = InitShaders(rend.api);
   if(!shSrcPack)
     ShowError(`Unable to obtain shaders,`);
