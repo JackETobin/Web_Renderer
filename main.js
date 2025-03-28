@@ -44,8 +44,8 @@ const vertices = new Float32Array([
 function main(rend)
 {
   const margin = 0.15;
-  let surfaceWidth = window.innerWidth * (1 - margin);
-  let surfaceHeight = window.innerHeight * (1 - margin);
+  let surfaceWidth = window.innerWidth;
+  let surfaceHeight = window.innerHeight;
   let size = (surfaceWidth < surfaceHeight) ? surfaceWidth :surfaceHeight;
 
   const shSrcPack = InitShaders(rend.api);
