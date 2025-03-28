@@ -12,15 +12,12 @@ async function MainInit()
 {
   /** @type {HTMLCanvasElement|null} */
   const surface = document.querySelector("#surface");
-
   const rend = await Render_Init(surface);
   if(!rend.api)
   {
     ShowError(`Unable to initialize renderer.`);
     return;
   }
-
-  ShowError(`Renderer initialized`);
   try {
     main(rend);
   } catch(e) {
@@ -46,7 +43,11 @@ const vertices = new Float32Array([
 
 function main(rend)
 {
-  ShowError("Main");
+  const margin = 0.15;
+  let surfaceWidth = window.innerWidth * (1 - margin);
+  let surfaceHeight = window.innerHeight * (1 - margin);
+  let size = (surfaceWidth < surfaceHeight) ? surfaceWidth :surfaceHeight;
+
   const shSrcPack = InitShaders(rend.api);
   if(!shSrcPack)
     ShowError(`Unable to obtain shaders,`);
@@ -60,7 +61,7 @@ function main(rend)
   packedBuffer.push(rend.packVertexBuffer(vertices, `triangles`, 32, `vertex`, `array_buffer`, `static_draw`));
   let renderAttribute = rend.packRenderAttribute(clearColor, null, null, `triangles`);
 
-  rend.configure(null, null, 0, 0);
+  rend.configure(null, null, size, size);
   rend.setShaders(shSrcPack);
   rend.setVertexBuffers(packedBuffer);
   rend.setVertexAttributes(0, vertexAttributes);

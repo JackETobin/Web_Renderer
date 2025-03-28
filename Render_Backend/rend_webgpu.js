@@ -84,7 +84,7 @@ GPU_Initialize(surface)
   if(api && device)
   {
     l_Context = {api: api, device: device, surface: surface};
-    ShowError(`webgpu initialized.`);
+    console.log(`webgpu initialized.`);
     return {
       api:                "webgpu",
       configure:          GPU_Configure,

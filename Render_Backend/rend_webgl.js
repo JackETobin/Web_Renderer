@@ -88,7 +88,7 @@ GL_Initialize(surface)
   if(api)
   {
     l_Context = {api: api, surface: surface};
-    ShowError(`${selected} initialized.`);
+    console.log(`${selected} initialized.`);
     return {
       api:                selected,
       configure:          GL_Configure,
@@ -363,9 +363,11 @@ GL_SetPrimative(primative)
   switch(primative)
   {
     case `point`:
+    case `points`:
       returnPrimative = l_Context.api.POINTS;
       break;
     case `line`:
+    case `lines`:
       returnPrimative = l_Context.api.LINES;
       break;
     case `line_strip`:
@@ -375,6 +377,7 @@ GL_SetPrimative(primative)
       returnPrimative = l_Context.api.LINE_LOOP;
       break;
     case `triangle`:
+    case `triangles`:
       returnPrimative = l_Context.api.TRIANGLES;
       break;
     case `triangle_fan`:

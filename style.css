@@ -1,43 +1,29 @@
-.ButtonStack {
-    border: 0px solid rgb(255, 255, 255);
-    position: relative;
-    z-index: 2;
-    left: 35%;
-    width: 30px;
-    display: grid;
-    margin-bottom: 22px;
-    margin-top: 18px;
-  }
+html, head, body {
+  margin: 0;
+  padding: 25px;
+  background-color: #2a2a2a;
+}
 
-  html, head, body {
-    margin: 0;
-    padding: 25px;
-    background-color: #2a2a2a;
-  }
+#surface {
+  /* width: 600px; */
+  /* height: 600px; */
+  padding: 0;
+  margin: auto;
+  display: block;
+  background-color: #da6052;
+}
 
-  #surface {
-    width: 600px;
-    height: 600px;
-    background-color: #da6052;
-  }
+#error-box {
+  color: #fd8080;
+  font-family: Verdana, Geneva, Tahoma, sans-serif;
+  font-weight: 500;
+  font-size: 12pt;
+  border: 1px solid white;
+  padding: 25px;
+  margin-top: 20px;
+}
 
-  #gpu-surface {
-    width: 600px;
-    height: 600px;
-    background-color: #da6052;
-  }
-
-  #error-box {
-    color: #fd8080;
-    font-family: Verdana, Geneva, Tahoma, sans-serif;
-    font-weight: 500;
-    font-size: 12pt;
-    border: 1px solid white;
-    padding: 25px;
-    margin-top: 20px;
-  }
-
-  .error-box-title {
-    color: #eee;
-    border-bottom: 1px solid gray;
-  }
+.error-box-title {
+  color: #eee;
+  border-bottom: 1px solid gray;
+}
