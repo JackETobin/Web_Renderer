@@ -9,7 +9,7 @@ html, head, body {
   /* height: 600px; */
   padding: 0;
   margin: auto;
-  display: block;
+  display: flex;
   background-color: #da6052;
 }
 
