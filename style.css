@@ -5,10 +5,8 @@ html, head, body {
 }
 
 #surface {
-  /* width: 600px; */
-  /* height: 600px; */
-  padding: 0;
+  top: 0; right: 0; bottom: 0; left: 0;
+  position: fixed;
   margin: auto;
-  display: flex;
   background-color: #da6052;
 }
