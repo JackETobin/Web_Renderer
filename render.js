@@ -1,4 +1,4 @@
-import { ShowError } from './error.js';
+import { Error } from './debug.js';
 // import { CompileShader } from './shaders.js';
 
 import { GPU_Initialize } from './Render_Backend/rend_webgpu.js';
@@ -23,6 +23,7 @@ import { GL_Initialize } from './Render_Backend/rend_webgl.js';
 * @property {*} buffer
 * @property {universal_buffer_attribute[]} attributes
 * @property {number} stride
+* @property {number} numVertices
 * @property {string} stepMode
 * @property {string} primative
 * @property {*} target
@@ -103,7 +104,7 @@ Render_PackVertexAttribute(location, numComponents, normalized, stride, offset, 
       };
       break;
     default:
-      ShowError(`Unknown backend api.`);
+      Error(`Unknown backend api.`);
   }
   return attribute;
 }
@@ -127,6 +128,7 @@ Render_PackVertexBuffer(vertexBuffer, primative, stride, stepMode, target, usage
         primative: primative,
         attributes: [],
         stride: stride,
+        numVertices: vertexBuffer.byteLength / stride,
         stepMode: stepMode
       }
       break;
@@ -134,27 +136,15 @@ Render_PackVertexBuffer(vertexBuffer, primative, stride, stepMode, target, usage
     case `webgl`:
       vertexBufferPackage = {
         buffer: vertexBuffer,
+        numVertices: vertexBuffer.byteLength / stride,
         target: target,
         usage: usage
       }
       break;
     default:
-      ShowError(`Unknown backend api.`);
+      Error(`Unknown backend api.`);
   }
   return vertexBufferPackage;
-}
-
-/**
-* 
-* @param {!object} packedBuffer 
-* @param {!object[]} attributeList 
-*/
-function
-Render_AttachAttribues(packedBuffer, attributeList)
-{
-  for(let i = 0; i < attributeList.length; i++)
-    packedBuffer.attributes.push(attributeList[i]);
-  return;
 }
 
 /**
@@ -162,16 +152,31 @@ Render_AttachAttribues(packedBuffer, attributeList)
  * @param {number} clearDepth 
  * @param {*} clearStencil 
  * @param {string} primative 
+ * @param {string} loadOp 
+ * @param {string} storeOp
  */
 function
 Render_PackRenderAttribute(clearColor, clearDepth, clearStencil, primative)
 {
-  return {
-    clearColor: clearColor,
-    clearDepth: clearDepth,
-    clearStencil: clearStencil,
-    primative: primative
-  };
+  switch(l_Backend.api) {
+    case `webgpu`:
+      return {
+        colorAttachments : [{
+          clearValue: clearColor,
+          loadOp: null,
+          storeOp: null,
+          view: null}]
+      };
+    case `webgl2`:
+    case `webgl`:
+      return {
+        clearColor: clearColor,
+        clearDepth: clearDepth,
+        clearStencil: clearStencil,
+        primative: primative
+      };
+    }
+    return null;
 }
 
 /** @param {rander_backend_obj} backend */
@@ -205,6 +210,6 @@ Render_Init(surface)
   if(l_Backend)
     return Object.freeze(Render_SetObject(l_Backend));
 
-  ShowError(`Unable to initialize renderer`);
+  Error(`Unable to initialize renderer`);
   return null;
 }

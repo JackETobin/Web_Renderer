@@ -1,8 +1,6 @@
-import { ShowError } from '../error.js';
+import { Error } from '../debug.js';
 
-// TODO: Modularize the renderpass settings
 // TODO: Setup configurable formats and labling
-// TODO: Check if it's possible to get the input binging location by name, that way the setup between api's gets more simple
 
 /** 
 * @typedef color
@@ -11,6 +9,43 @@ import { ShowError } from '../error.js';
 * @property {number} g
 * @property {number} b
 * @property {number} a
+*/
+
+/**
+* @typedef color_attachment
+* @type {object}
+* @property {color} clearValue
+* @property {number} depthSlice
+* @property {!string} loadOp
+* @property {!string} storeOp
+* @property {object} resolveTarget
+* @property {!object} view
+*/
+
+/**
+* @typedef depth_stencil_attachment
+* @type {object}
+* @property {number} depthClearValue
+* @property {string} depthLoadOp
+* @property {boolean} depthReadOnly
+* @property {string} depthStoreOp
+* @property {number} stencilClearValue
+* @property {string} stencilLoadOp
+* @property {boolean} stencilReadOnly
+* @property {string} stencilStoreOp
+* @property {!object} view
+*/
+
+/**
+* @typedef render_attribute
+* @type {object}
+* @property {!color_attachment[]} colorAttachments
+* @property {depth_stencil_attachment} depthStencilAttachment
+* @property {string} label
+* @property {number} maxDrawCount
+* @property {!number} drawCount
+* @property {object} occlusionQuerySet
+* @property {object[]} timestampWrites
 */
 
 /**
@@ -34,6 +69,7 @@ import { ShowError } from '../error.js';
 * @property {*} buffer
 * @property {string} primative
 * @property {buffer_attribute[]} attributes
+* @property {number} numVertices
 * @property {number} stride
 * @property {string} stepMode
 */
@@ -49,6 +85,7 @@ import { ShowError } from '../error.js';
 * @property {object} commandEncoder
 * @property {object} renderPass
 * @property {object} pipeline
+* @property {number} drawCount
 */
 
 /** @type {internal} */
@@ -60,7 +97,8 @@ let l_Internal = {
   vertexBuffer: [],
   commandEncoder: null,
   renderPass: null,
-  pipeline: null
+  pipeline: null,
+  drawCount: 0
 };
 
 /**
@@ -165,12 +203,10 @@ GPU_Configure(config)
   return;
 }
 
-// TODO: Build out a function that automatically packages shaders correctly
 /** @param {!shader_package[]} shadPackList */
 export function
 GPU_SetShaders(shadPackList)
 {
-  // TODO: Take a list of shader indices and just call a shader import function from the shader file here??
   const gpu = l_Context.device;
   for(let i = 0; i < shadPackList.length; i++)
   {
@@ -183,7 +219,6 @@ GPU_SetShaders(shadPackList)
   return;
 }
 
-// TODO: Build out a function that automatically packages vertex buffers correctly
 /** @param {!vertex_buffer_props[]} bufferListCPU */
 function
 GPU_SetVertexBuffers(bufferListCPU)
@@ -191,7 +226,6 @@ GPU_SetVertexBuffers(bufferListCPU)
   const gpu = l_Context.device;
   for(let i = 0; i < bufferListCPU.length; i++)
   {
-    // TODO: Set the shader input locations in the vertex attributes
     let cpu = bufferListCPU[i];
     let bufferGPU = gpu.createBuffer({
      size: cpu.buffer.byteLength,
@@ -219,7 +253,7 @@ GPU_SetAttributes(bufferIndex, attributeList)
         attributeList[i].format = `float32x4`;
         break;
       default:
-        ShowError(`Unknown attribute format: ${attributeList[i].format}`);
+        Error(`Unknown attribute format: ${attributeList[i].format}`);
         return;
     }
     l_Internal.vertexBuffer[bufferIndex].attributes.push(attributeList[i]);
@@ -227,47 +261,21 @@ GPU_SetAttributes(bufferIndex, attributeList)
   return;
 }
 
-/**
-* @typedef color_attachment
-* @type {object}
-* @property {color} clearValue
-* @property {number} depthSlice
-* @property {!string} loadOp
-* @property {!string} storeOp
-* @property {object} resolveTarget
-* @property {!object} view
-*/
-
-/**
-* @typedef depth_stencil_attachment
-* @type {object}
-* @property {number} depthClearValue
-* @property {string} depthLoadOp
-* @property {boolean} depthReadOnly
-* @property {string} depthStoreOp
-* @property {number} stencilClearValue
-* @property {string} stencilLoadOp
-* @property {boolean} stencilReadOnly
-* @property {string} stencilStoreOp
-* @property {!object} view
-*/
-
-/**
-* @typedef rander_attribute
-* @type {object}
-* @property {!color_attachment[]} colorAttachments
-* @property {object} depthStencilAttachment
-* @property {string} label
-* @property {number} maxDrawCount
-* @property {object} occlusionQuerySet
-* @property {object[]} timestampWrites
-*/
-
-
 // TODO: Make configurable renderpass options
+/** @param {render_attribute} renderAttribute */
 function
-GPU_SetRenderAttribute()
+GPU_SetRenderAttribute(renderAttribute)
 {
+  for(let i = 0; i < renderAttribute.colorAttachments.length; i++)
+  {
+    if(renderAttribute.colorAttachments[i].clearValue)
+    {
+      renderAttribute.colorAttachments[i].loadOp = `clear`;
+      renderAttribute.colorAttachments[i].storeOp = `store`;
+    }
+    renderAttribute.colorAttachments[i].view = l_Context.api.getCurrentTexture().createView();
+  }
+  l_Internal.renderPass = renderAttribute;
   return;
 }
 
@@ -286,6 +294,7 @@ GPU_BuildPipeline(index)
   let vertexBuffers = [];
   for(let i = 0; i < l_Internal.vertexBuffer.length; i++)
   {
+    l_Internal.drawCount += l_Internal.vertexBuffer[i].numVertices;
     vertexBuffers.push( 
     {
       attributes: l_Internal.vertexBuffer[i].attributes,
@@ -315,19 +324,8 @@ GPU_BuildPipeline(index)
   };
   const pipeline = l_Context.device.createRenderPipeline(pipelineDescriptor);
   const commandEncoder = l_Context.device.createCommandEncoder();
-  const renderPass = {
-    colorAttachments: [
-      {
-        clearValue: l_Internal.clearColor,
-        loadOp: 'clear',
-        storeOp: 'store',
-        view: l_Context.api.getCurrentTexture().createView()
-      }
-    ]
-  };
   l_Internal.pipeline = pipeline;
   l_Internal.commandEncoder = commandEncoder;
-  l_Internal.renderPass = renderPass;
 }
 
 function
@@ -336,91 +334,8 @@ GPU_Draw(index)
   const passEncoder = l_Internal.commandEncoder.beginRenderPass(l_Internal.renderPass);
   passEncoder.setPipeline(l_Internal.pipeline);
   passEncoder.setVertexBuffer(0, l_Internal.vertexBuffer[index].buffer);
-  passEncoder.draw(3);
+  passEncoder.draw(l_Internal.drawCount);
   passEncoder.end();
 
   l_Context.device.queue.submit([l_Internal.commandEncoder.finish()]);
 }
-
-  // if(api.context == null)
-  // {
-  //     ShowError("No available graphics support.");
-  //     return;
-  // }
-  // api.surface.width = api.surface.getBoundingClientRect().width;
-  // api.surface.height = api.surface.getBoundingClientRect().height;
-  
-  // const presentFormat = navigator.gpu.getPreferredCanvasFormat();
-  // api.context.configure({
-  //   device: api.device, 
-  //   format: presentFormat,
-  //   alphaMode: 'premultiplied'});
-
-  // const shVertModule = api.device.createShaderModule({code: shVertGPU});
-  // const shFragModule = api.device.createShaderModule({code: shFragGPU});
-  // const vertexBuffer = api.device.createBuffer({
-  //   size: vertices.byteLength,
-  //   usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST
-  // })
-  // api.device.queue.writeBuffer(vertexBuffer, 0, vertices, 0, vertices.length);
-  // const vertexBuffers = [
-  //   {
-  //     attributes: [
-  //       {
-  //         shaderLocation: 0, // position
-  //         offset: 0,
-  //         format: "float32x4",
-  //       },
-  //       {
-  //         shaderLocation: 1, // color
-  //         offset: 16,
-  //         format: "float32x4",
-  //       },
-  //     ],
-  //     arrayStride: 32,
-  //     stepMode: "vertex",
-  //   },
-  // ];
-  
-  // const pipelineDescriptor = {
-  //   vertex: {
-  //     module: shVertModule,
-  //     entryPoint: "vertex_main",
-  //     buffers: vertexBuffers,
-  //   },
-  //   fragment: {
-  //     module: shFragModule,
-  //     entryPoint: "fragment_main",
-  //     targets: [
-  //       {
-  //         format: navigator.gpu.getPreferredCanvasFormat(),
-  //       },
-  //     ],
-  //   },
-  //   layout: "auto",
-  //   primitive: {
-  //     topology: "triangle-list",
-  //   },
-  // };
-  
-  // const pipeline = api.device.createRenderPipeline(pipelineDescriptor);
-
-  // const commandEncoder = api.device.createCommandEncoder();
-  // const clearColor = { r: 0.08, g: 0.08, b: 0.08, a: 1.0 }
-  // const renderPass = {
-  //   colorAttachments: [
-  //     {
-  //       clearValue: clearColor,
-  //       loadOp: 'clear',
-  //       storeOp: 'store',
-  //       view: api.context.getCurrentTexture().createView()
-  //     }
-  //   ]
-  // };
-  // const passEncoder = commandEncoder.beginRenderPass(renderPass);
-  // passEncoder.setPipeline(pipeline);
-  // passEncoder.setVertexBuffer(0, vertexBuffer);
-  // passEncoder.draw(3);
-  // passEncoder.end();
-
-  // api.device.queue.submit([commandEncoder.finish()]);

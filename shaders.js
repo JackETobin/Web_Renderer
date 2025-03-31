@@ -79,7 +79,7 @@ fn fragment_main(fragData: VertexOut) -> @location(0) vec4f
 // Shader source END
 //Functionality BEGIN
 
-import { ShowError } from './error.js';
+import { Error } from './debug.js';
 
 export function InitShaders(apiName)
 {
@@ -111,7 +111,7 @@ export function InitShaders(apiName)
       });
       break;
     default:
-      ShowError(`Unknown graphics API:\t${apiName}`);
+      Error(`Unknown graphics API:\t${apiName}`);
       return null;
   }
     return shadSrcPackage;
@@ -125,7 +125,7 @@ export function InitShaders(apiName)
 //     if(!glContext.getShaderParameter(shader, glContext.COMPILE_STATUS))
 //     {
 //       const err = glContext.getShaderInfoLog(shader)
-//       ShowError(`Shader compilation error:\n${err}`);
+//       Error(`Shader compilation error:\n${err}`);
 //       return;
 //     }
 //     return shader;

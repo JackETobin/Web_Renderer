@@ -1,4 +1,4 @@
-import { ShowError } from '../error.js';
+import { Error } from '../debug.js';
 
 // TODO: define webgl side internal objcects
 
@@ -37,17 +37,19 @@ import { ShowError } from '../error.js';
 * @type {object}
 * @property {object} data
 * @property {buffer_attribute[]} attributes
+* @property {number} numVertices
 */
 
 /**
- * @typedef render_attribute
- * @type {object}
- * @property {color} clearColor
- * @property {number} clearDepth
- * @property {*} clearStencil
- * @property {!*} primative
- * @property {*} clearOp
- */
+* @typedef render_attribute
+* @type {object}
+* @property {color} clearColor
+* @property {number} clearDepth
+* @property {number} drawCount
+* @property {*} clearStencil
+* @property {!*} primative
+* @property {*} clearOp
+*/
 
 /**
 * @typedef internal
@@ -123,7 +125,7 @@ GL_SetClearColor()
 function
 GL_Configure(config)
 {
-  // ShowError(`Configure.`);
+  // Error(`Configure.`);
   l_Context.surface.width = (config.width != null) ?
     config.width : l_Context.surface.getBoundingClientRect().width;
 
@@ -146,7 +148,7 @@ GL_CompileShader(src, type)
   if(!l_Context.api.getShaderParameter(shader, l_Context.api.COMPILE_STATUS))
   {
     const err = l_Context.api.getShaderInfoLog(shader)
-    ShowError(`Shader compilation error:\n${err}`);
+    Error(`Shader compilation error:\n${err}`);
     return;
   }
   return shader;
@@ -163,7 +165,7 @@ GL_BuildProgram(shaderPair)
   if(!l_Context.api.getProgramParameter(program, l_Context.api.LINK_STATUS))
   {
     const err = l_Context.api.getProgramInfoLog(program);
-    ShowError(`Shader link error:\n${err}`);
+    Error(`Shader link error:\n${err}`);
     return;
   }
   return program;
@@ -173,7 +175,6 @@ GL_BuildProgram(shaderPair)
 function
 GL_SetShaders(shadPackList)
 {
-  // ShowError(`Set shaders.`);
   for(let i = 0; i < shadPackList.length; i++)
   {
     let shaderPair = {
@@ -216,7 +217,7 @@ GL_SetTarget(target)
       returnTarget = l_Context.api.PIXEL_UNPACK_BUFFER;
       break;
     default:
-      ShowError(`Unknown buffer target: ${target}`);
+      Error(`Unknown buffer target: ${target}`);
   }
   return returnTarget;
 }
@@ -255,20 +256,28 @@ GL_SetUsage(usage)
       targetUsage = l_Context.api.STREAM_COPY;
       break;
     default:
-      ShowError(`Unknown buffer usage: ${usage}`);
+      Error(`Unknown buffer usage: ${usage}`);
   }
   return targetUsage;
 }
+
+/**
+* @typedef vertex_buffer_obj
+* @type {object}
+* @property {!object} buffer
+* @property {!number} numVertices
+* @property {!string} target
+* @property {!string} usage
+*/
 
 /** @param {!vertex_buffer_obj} bufferPackage */
 function 
 GL_BindBuffer(bufferPackage)
 {
-  // ShowError(`Bind buffer`);
   const newBufferGPU = l_Context.api.createBuffer();
   if(!newBufferGPU)
   {
-    ShowError("Unable to allocate GPU side buffer.");
+    Error("Unable to allocate GPU side buffer.");
     return;
   }
   const target = GL_SetTarget(bufferPackage.target);
@@ -282,9 +291,11 @@ GL_BindBuffer(bufferPackage)
 function
 GL_SetVertexBuffers(bufferListCPU)
 {
-  // ShowError(`Set vertex buffer`);
   for(let i = 0; i < bufferListCPU.length; i++)
-    l_Internal.buffer.push({data: GL_BindBuffer(bufferListCPU[i]), attributes: []});
+    l_Internal.buffer.push({
+  data: GL_BindBuffer(bufferListCPU[i]), 
+  attributes: [], 
+  numVertices: bufferListCPU[i].numVertices});
   return;
 }
 
@@ -325,7 +336,7 @@ GL_SetFormat(format)
       returnFormat = l_Context.api.HALF_FLOAT;
       break;
     default:
-      ShowError(`Unknown format: ${format}`);
+      Error(`Unknown format: ${format}`);
   }
   return returnFormat;
 }
@@ -338,7 +349,6 @@ GL_SetFormat(format)
 function
 GL_SetAttributes(bufferIndex, attributeList)
 {
-  // ShowError(`Set attributes`);
   for(let i = 0; i < attributeList.length; i++)
   {
     attributeList[i].format = GL_SetFormat(attributeList[i].format);
@@ -346,14 +356,6 @@ GL_SetAttributes(bufferIndex, attributeList)
   }
   return;
 }
-
-///** @param {color} color */
-//function GL_SetClearColor(color)
-//{
-//  // ShowError(`Clear color`);
-//  l_Internal.render.clearColor = color;
-//  return;
-//}
 
 /** @param {!string} primative */
 function
@@ -387,7 +389,7 @@ GL_SetPrimative(primative)
       returnPrimative = l_Context.api.TRIANGLE_STRIP;
       break;
     default:
-      ShowError(`Unknown primative: ${primative}`);
+      Error(`Unknown primative: ${primative}`);
   }
   return returnPrimative;
 }
@@ -428,14 +430,14 @@ GL_SetRenderAttribute(rendAttrPack)
     clearOp: GL_SetClearOp(
       (rendAttrPack.clearColor != null), 
       (rendAttrPack.clearDepth != null), 
-      (rendAttrPack.clearStencil != null))
+      (rendAttrPack.clearStencil != null)),
+    drawCount: 0
   }
 }
 
 function
 GL_BuildPipeline(programIndex)
 {
-  // ShowError(`Build pipeline`);
   l_Context.api.clearColor(
     l_Internal.render.clearColor.r, 
     l_Internal.render.clearColor.g, 
@@ -458,12 +460,13 @@ GL_BuildPipeline(programIndex)
       attr[j].stride,
       attr[j].offset);
     }
+    l_Internal.render.drawCount += l_Internal.buffer[i].numVertices;
   }
 }
 
 function 
 GL_Draw(temp)
 {
-  l_Context.api.clear(l_Context.api.COLOR_BUFFER_BIT);
-  l_Context.api.drawArrays(l_Context.api.TRIANGLES, 0, 3);
+  l_Context.api.clear(l_Internal.render.clearOp);
+  l_Context.api.drawArrays(l_Internal.render.primative, 0, l_Internal.render.drawCount);
 }

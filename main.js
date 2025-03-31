@@ -1,11 +1,11 @@
-import { ShowError } from './error.js';
+import { Error, Warn, Debug } from './debug.js';
 import { Render_Init } from './render.js';
 import { InitShaders } from './shaders.js';
 
 try {
   MainInit();
 } catch(e) {
-    ShowError(`Initialization: Uncaught exception:\n${e}`);
+    Error(`Initialization: Uncaught exception:\n${e}`);
 }
 
 async function MainInit()
@@ -15,13 +15,13 @@ async function MainInit()
   const rend = await Render_Init(surface);
   if(!rend.api)
   {
-    ShowError(`Unable to initialize renderer.`);
+    Error(`Unable to initialize renderer.`);
     return;
   }
   try {
     main(rend);
   } catch(e) {
-    ShowError(`Main Uncaught exception:\n${e}`);
+    Error(`Main Uncaught exception:\n${e}`);
   };
 }
 
@@ -43,14 +43,17 @@ const vertices = new Float32Array([
 
 function main(rend)
 {
-  const margin = 0.15;
+  Debug(`Test.`);
+  Warn(`Test.`);
+  Error(`Test.`);
+  // const margin = 0.15;
   let surfaceWidth = window.innerWidth;
   let surfaceHeight = window.innerHeight;
   let size = (surfaceWidth < surfaceHeight) ? surfaceWidth :surfaceHeight;
 
   const shSrcPack = InitShaders(rend.api);
   if(!shSrcPack)
-    ShowError(`Unable to obtain shaders,`);
+    Error(`Unable to obtain shaders,`);
   
   const clearColor = {r: 0.08, g: 0.08, b: 0.08, a: 1.0};
   const vertexAttributes = [];
