@@ -1,0 +1,12 @@
+html, head, body {
+  margin: 0;
+  padding: 25px;
+  background-color: #2a2a2a;
+}
+
+#surface {
+  top: 0; right: 0; bottom: 0; left: 0;
+  position: fixed;
+  margin: auto;
+  background-color: #52afda;
+}
