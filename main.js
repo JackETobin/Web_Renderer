@@ -150,7 +150,7 @@ main(api)
 
   let cellCount = (GRID_WIDTH * GRID_HEIGHT) / 2;
   const maze = new Uint8Array(cellCount);
-  maze.fill(51, 0, cellCount - 1);
+  maze.fill(255, 0, cellCount - 1);
 
   let augWidth = GRID_WIDTH + (GRID_WIDTH % 2);
   let augHeight = GRID_HEIGHT + (GRID_HEIGHT % 2);
