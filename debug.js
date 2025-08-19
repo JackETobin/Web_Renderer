@@ -23,8 +23,21 @@ Error(errorText_In)
   return null;
 }
 
+// NOTE: These two should kill the program.
 export function
 Assert()
 {
+  return null;
+}
+
+export function
+Abort(abortText_In)
+{
+  // TODO: Abort should create an HTML element that displays the failure message and reason that the program cant cotinue.
+  try {
+    throw new abortMsg(`${errorText_In}\n\nExecution aborted.`);
+  } catch {
+    Error(abortMsg);
+  }
   return null;
 }
