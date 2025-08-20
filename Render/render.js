@@ -78,7 +78,7 @@ const computeLineList = `
   */
 
  // TODO: Add an initialized bool and checks per function.
-export class renderer
+export class Renderer
 {
   /** @type bufferType_Enum */
   bufferType = Object.freeze({
@@ -114,8 +114,12 @@ export class renderer
   * @param {number} surfaceSize_In 
   * @returns {renderer}
   */
-  async init(surfaceSize_In)
+  async init()
   {
+    
+    const surfaceSize = (window.innerWidth < window.innerHeight) ? 
+                         window.innerWidth : window.innerHeight;
+
     const adapter = (!navigator.gpu) ? Abort('WebGPU unsupported.') : await navigator.gpu.requestAdapter();
     let surface = document.getElementById('surface');
     this.#context = surface.getContext('webgpu');
@@ -126,7 +130,7 @@ export class renderer
       const missing = (!this.#context) ? "Context unavailable." : "Device unavailable.";
       Abort(missing);
     }
-    surface.width = surface.height = surfaceSize_In;
+    surface.width = surface.height = surfaceSize;
     this.#surfaceFormat = navigator.gpu.getPreferredCanvasFormat();
     this.#buffer = new Array();
     return this;
