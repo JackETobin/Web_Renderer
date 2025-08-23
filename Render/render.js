@@ -1,4 +1,4 @@
-import {Debug, Warn, Error, Assert, Abort} from '../debug.js';
+import {Debug, Warn, Fatal, Assert, Abort} from '../debug.js';
 
 const WORKGROUP_SIZE = 4;
 
@@ -250,7 +250,7 @@ export class Renderer
         return;
         break;
       default:
-        Error("Unknown compute operation.");
+        Abort("Compute: Unknown compute operation.");
         return;
     }
 

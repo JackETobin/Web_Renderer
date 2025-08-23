@@ -1,4 +1,4 @@
-import {Debug, Warn, Error, Assert, Abort} from '../debug.js';
+import {Debug, Warn, Assert, Abort} from '../debug.js';
 
 import {Renderer} from '../Render/render.js'
 
