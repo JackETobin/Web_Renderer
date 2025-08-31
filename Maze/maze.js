@@ -76,49 +76,71 @@ export class Maze
     * @param {number} height */
     async init(width, height)
     {
-        if(!width || !height)
-        {
-            const missing = (!width) ? "Width" : "Height";
-            Abort(`Maze initialization missing field: ${missing}`);
-            return;
-        }
-        this.#rend = new Renderer();
-        await this.#rend.init();
-        this.#width = width;
-        this.#height = height;
-        this.#l_BuildVertexGrid();
+      if(!width || !height)
+      {
+          const missing = (!width) ? "Width" : "Height";
+          Abort(`Maze initialization missing field: ${missing}`);
+          return;
+      }
+      this.#rend = new Renderer();
+      await this.#rend.init();
+      this.#width = width;
+      this.#height = height;
+      this.#l_BuildVertexGrid();
     }
 
+    /** 
+    * @param {number} width_In 
+    * @param {number} height_In */
+    setDimensions(width_In, height_In)
+    {
+      if(!width_In || !height_In)
+        {
+            const missing = (!width_In) ? "Width" : "Height";
+            Abort(`Setting maze dimensions missing field: ${missing}`);
+            return;
+        }
+        this.#width = width_In;
+        this.#height = height_In;
+        return;
+    }
+
+    /** @type number */
     #wallSet = 0;
+
+    /** @type number */
     #lineList = 0;
+
+    /** @type number */
     #lineCount = 0;
 
     /** @param {number} fill_In */
     fill(fill_In)
     {
-        let cellCount = (this.#width * this.#height) / 2;
-        const maze = new Uint8Array(cellCount);
-        maze.fill(fill_In, 0, cellCount - 1);
+      let cellCount = (this.#width * this.#height) / 2;
+      const maze = new Uint8Array(cellCount);
+      maze.fill(fill_In, 0, cellCount - 1);
 
-        let augWidth = this.#width + (this.#width % 4);
-        let augHeight = this.#height + (this.#height % 4);
-        const walls = new Uint8Array(augWidth * augHeight);
+      let augWidth = this.#width + (this.#width % 4);
+      let augHeight = this.#height + (this.#height % 4);
+      const walls = new Uint8Array(augWidth * augHeight);
 
-        let wallIndex = 0;
-        for(let y = 0; y < this.#height; y += 2)
+      let wallIndex = 0;
+      for(let y = 0; y < this.#height; y += 2)
+      {
+        for(let x = 0; x < this.#width; x += 2)
         {
-          for(let x = 0; x < this.#width; x += 2)
-          {
-            walls.set([maze[this.#width * y + x]], wallIndex);
-            walls.set([maze[(this.#width * (y + 1)) + x + 1]], wallIndex + 1);
-            wallIndex += 2;
-          }
+          walls.set([maze[this.#width * y + x]], wallIndex);
+          walls.set([maze[(this.#width * (y + 1)) + x + 1]], wallIndex + 1);
+          wallIndex += 2;
         }
-  
+      }
+      if(!this.#wallSet)
         this.#wallSet = this.#rend.bufferAlloc("Wall Set", walls.byteLength, this.#rend.bufferType.storage);
-        this.#rend.bufferWrite(this.#wallSet, 0, walls);
+      this.#rend.bufferWrite(this.#wallSet, 0, walls);
 
-        this.#lineCount = (4 * this.#height * this.#width);
+      this.#lineCount = (4 * this.#height * this.#width);
+      if(!this.#lineList)
         this.#lineList = this.#rend.bufferAlloc("Line list", this.#lineCount * 2, this.#rend.bufferType.index);
     }
 

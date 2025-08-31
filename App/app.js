@@ -11,10 +11,13 @@ Application {
     #maze = null;
 
     /** @type number */
-    #cellWidth = 32;
+    #cellWidth = 64;
 
     /** @type number */
-    #cellHeight = 32;
+    #cellHeight = 64;
+
+    /** @type HTMLElement */
+    #numberBox = null;
 
     #pointer_In(pointerX_In, pointerY_In)
     {
@@ -22,14 +25,27 @@ Application {
         return;
     }
 
-    /** @param {KeyboardEvent} b_Input */
-    #button_In(b_Input)
+    #refill(number_In)
     {
-        Debug(b_Input.code);
+        this.#maze.fill(number_In);
+        this.#maze.draw();
         return;
     }
 
-    async init()
+    /** @param {KeyboardEvent} b_Input */
+    input(b_Input)
+    {
+        switch(b_Input.code)
+        {
+            case "Enter":
+                let newNumber = this.#numberBox.value;
+                this.#refill(newNumber);
+        }
+        return;
+    }
+
+    /** @param {function} pfnButtonCallback_In */
+    async init(pfnButtonCallback_In)
     {
         this.#maze = new Maze();
         const header = document.getElementById('head');
@@ -45,20 +61,23 @@ Application {
           this.#l_Kill(`Fatal error:/n${e}`);
         };
 
-        window.addEventListener('keydown', this.#button_In, false);
-        return;
-    }
+        this.#numberBox = document.createElement("input");
+        this.#numberBox.type = "number";
+        this.#numberBox.min = "0";
+        this.#numberBox.max = "255";
+        document.body.appendChild(this.#numberBox);
+        window.addEventListener('keydown', pfnButtonCallback_In, false);
 
-    async run()
-    {
-        this.#maze.fill(119);
+        this.#maze.fill(255);
         this.#maze.draw();
+
+        return;
     }
 
     #l_Kill(killMessage_In)
     {
-        if(errorText_In)
-            Fatal(errorText_In);
+        if(killMessage_In)
+            Fatal(killMessage_In);
         return null;
     }
 }

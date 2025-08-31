@@ -101,7 +101,7 @@ export class Renderer
   /** @type string */
   #surfaceFormat = null;
 
-  /** @type buffer_Obj[] */
+  /** @type Map */
   #buffer = null;
 
   #computeBindGroup = null;
@@ -112,7 +112,7 @@ export class Renderer
 
   /**
   * @param {number} surfaceSize_In 
-  * @returns {renderer}
+  * @returns {Renderer}
   */
   async init()
   {
@@ -132,7 +132,7 @@ export class Renderer
     }
     surface.width = surface.height = surfaceSize;
     this.#surfaceFormat = navigator.gpu.getPreferredCanvasFormat();
-    this.#buffer = new Array();
+    this.#buffer = new Map();
     return this;
   }
   
@@ -146,14 +146,20 @@ export class Renderer
     return buffer;
   }
 
-  #l_PushBuffer(buffer_In, type_In, layout_In)
+  #l_PushBuffer(label_In, buffer_In, type_In, layout_In)
   {
     if(buffer_In != null)
-      this.#buffer.push({
-        mem: buffer_In,
-        type: type_In, 
-        layout: layout_In});
-    return (this.#buffer.length - 1);
+    {
+      this.#buffer.set(
+        label_In,
+        {
+          mem: buffer_In,
+          type: type_In, 
+          layout: layout_In
+        });
+      return label_In;
+    }
+    return null;
   }
 
   /**
@@ -162,14 +168,14 @@ export class Renderer
    * @param {bufferType_Enum}   usage_In
    * @param {number}            stride_In
    * @param {string}            format_In
-   * @returns {number}          bufferIndex
+   * @returns {string}          bufferLabel
    */
   bufferAlloc(label_In, byteSize_In, usage_In, stride_In, format_In)
   {
     let usage = 0;
     let layout = null;
     let newBuffer = null;
-    let label = (label_In == null) ? "Unlabeled" : label_In;
+    let label = (label_In == null) ? new Date().getTime() : label_In;
     switch(usage_In) 
     {
       case this.bufferType.vertex:
@@ -189,50 +195,61 @@ export class Renderer
             shaderLocation: 0
           }]
         };
-        return this.#l_PushBuffer(newBuffer, "read-only-storage", layout);
+        return this.#l_PushBuffer(label_In, newBuffer, "read-only-storage", layout);
       case this.bufferType.index:
         usage = GPUBufferUsage.INDEX | 
                 GPUBufferUsage.STORAGE | 
                 GPUBufferUsage.COPY_DST | 
                 GPUBufferUsage.COPY_SRC;
         newBuffer = this.#l_AllocBuffer(label, byteSize_In, usage);
-        return this.#l_PushBuffer(newBuffer, "storage", layout);
+        return this.#l_PushBuffer(label_In, newBuffer, "storage", layout);
       case this.bufferType.uniform:
         usage = GPUBufferUsage.UNIFORM | 
                 GPUBufferUsage.COPY_DST
         newBuffer = this.#l_AllocBuffer(label, byteSize_In, usage);
-        return this.#l_PushBuffer(newBuffer, "read-only-storage", layout);
+        return this.#l_PushBuffer(label_In, newBuffer, "read-only-storage", layout);
       case this.bufferType.storage:
         usage = GPUBufferUsage.STORAGE | 
                 GPUBufferUsage.COPY_DST;
         newBuffer = this.#l_AllocBuffer(label, byteSize_In, usage);
-        return this.#l_PushBuffer(newBuffer, "read-only-storage", layout);
+        return this.#l_PushBuffer(label_In, newBuffer, "read-only-storage", layout);
       default:
         Warn("Unknown buffer type: unable to allocate buffer.");
     }
-    return -1;
+    return null;
+  }
+
+  bufferFree(buffer_In)
+  {
+    const toDestroy = this.#buffer.get(buffer_In).mem;
+    toDestroy.destroy();
+    if(this.#buffer.delete(buffer_In) != true)
+      Warn(`Failed to delete buffer entry: ${buffer_In}`);
+    return;
   }
 
   /**
-  * @param {number}             bufferIndex_In 
+  * @param {number}             buffer_In 
   * @param {number}             offset_In 
   * @param {*}                  data_In 
   */
-  bufferWrite(bufferIndex_In, offset_In, data_In)
+  bufferWrite(buffer_In, offset_In, data_In)
   {
+    const writeTarget = this.#buffer.get(buffer_In);
     this.#device.queue.writeBuffer(
-      this.#buffer[bufferIndex_In].mem, 
+      writeTarget.mem, 
       offset_In, 
       data_In);
+    return;
   }
 
   /**
-  * @param {number[]}           indexList_In
+  * @param {number[]}           bufferList_In
   * @param {computeType_Enum}   computeType_In
   */
-  setComputePipeline(indexList_In, computeType_In)
+  setComputePipeline(bufferList_In, computeType_In)
   {
-    if(!indexList_In)
+    if(!bufferList_In)
     {
       Warn("Index list required for compute pipeline.");
       return;
@@ -256,16 +273,16 @@ export class Renderer
 
     const layoutEntries = [];
     const bindGroupEntries = [];
-    for(let i = 0; i < indexList_In.length; i++)
+    for(let i = 0; i < bufferList_In.length; i++)
     {
       layoutEntries.push({
         binding: i,
         visibility: GPUShaderStage.COMPUTE,
-        buffer: { type: this.#buffer[indexList_In[i]].type }
+        buffer: { type: this.#buffer.get(bufferList_In[i]).type }
       });
       bindGroupEntries.push({
         binding: i, 
-        resource: { buffer: this.#buffer[indexList_In[i]].mem }
+        resource: { buffer: this.#buffer.get(bufferList_In[i]).mem }
       });
     }
 
@@ -312,9 +329,9 @@ export class Renderer
     this.#device.queue.submit([encoder.finish()]);
   }
 
-  setRenderPipeline(vertexList_In, indexList_In)
+  setRenderPipeline(vertexBuffer_In, indexBuffer_In)
   {
-    if(!indexList_In)
+    if(!indexBuffer_In)
     {
       Warn("Index list required for render pipeline.");
       return;
@@ -330,7 +347,7 @@ export class Renderer
     const layoutEntries = [];
     /** @type object[] */
     const bindGroupEntries = [];
-    for(let i = 0; i < indexList_In.length; i++)
+    for(let i = 0; i < indexBuffer_In.length; i++)
     {
       layoutEntries.push({
         binding: i,
@@ -339,14 +356,14 @@ export class Renderer
       });
       bindGroupEntries.push({
         binding: i, 
-        resource: { buffer: this.#buffer[indexList_In[i]].mem }
+        resource: { buffer: this.#buffer.get(indexBuffer_In[i]).mem }
       });
     }
     
     /** @type object[] */
     const bufferList = [];
-    for(let i = 0; i < indexList_In.length; i++)
-      bufferList.push(this.#buffer[vertexList_In[i]].layout);
+    for(let i = 0; i < indexBuffer_In.length; i++)
+      bufferList.push(this.#buffer.get(vertexBuffer_In[i]).layout);
 
     const bindGroupLayout =
       this.#device.createBindGroupLayout({
@@ -390,7 +407,7 @@ export class Renderer
     });
   }
 
-  draw(vertexIndex_In, indexIndex_In, drawCount_In)
+  draw(vertexBuffer_In, indexBuffer_In, drawCount_In)
   {
     const textureView = this.#context.getCurrentTexture().createView({label: "View"});
     let encoder = this.#device.createCommandEncoder(
@@ -405,8 +422,8 @@ export class Renderer
       }]
     });
     renderPass.setPipeline(this.#renderPipeline);
-    renderPass.setVertexBuffer(0, this.#buffer[vertexIndex_In].mem);
-    renderPass.setIndexBuffer(this.#buffer[indexIndex_In].mem, 'uint16', 0);
+    renderPass.setVertexBuffer(0, this.#buffer.get(vertexBuffer_In).mem);
+    renderPass.setIndexBuffer(this.#buffer.get(indexBuffer_In).mem, 'uint16', 0);
     renderPass.setBindGroup(0, this.#renderBindGroup);
     renderPass.drawIndexed(drawCount_In, 1, 0);
     renderPass.end();
@@ -417,7 +434,7 @@ export class Renderer
   async printBuffer(index_In)
   {
     const encoder = this.#device.createCommandEncoder();
-    const buffer = this.#buffer[index_In].mem;
+    const buffer = this.#buffer.get(index_In).mem;
     const readBuffer = this.#device.createBuffer({
       label: 'Line List',
       size: buffer.size,

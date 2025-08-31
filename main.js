@@ -1,12 +1,17 @@
 import { Application } from './App/app.js';
 
+let l_App = null;
+
 main();
 
 /** @param {api_obj} api */
 async function 
 main(api)
 {
-  const app = new Application();
-  await app.init();
-  app.run();
+  l_App = new Application();
+  await l_App.init(ButtonCallback);
 }
+
+function
+ButtonCallback(button_In)
+{ l_App.input(button_In); }
