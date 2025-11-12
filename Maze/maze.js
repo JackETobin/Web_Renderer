@@ -2,6 +2,15 @@ import {Debug, Warn, Assert, Abort} from '../debug.js';
 
 import {Renderer} from '../Render/render.js'
 
+/**
+ * @typedef cell
+ * @type {object}
+ * @property {boolean} N
+ * @property {boolean} S
+ * @property {boolean} E
+ * @property {boolean} W
+ */
+
 export class Maze
 {
     /** @type Renderer */
@@ -114,44 +123,58 @@ export class Maze
     /** @type number */
     #lineCount = 0;
 
+    // TODO: This should be stripped as well in liu of a maze algorithm.
     /** @param {number} fill_In */
     fill(fill_In)
     {
-      let cellCount = (this.#width * this.#height) / 2;
-      const maze = new Uint8Array(cellCount);
-      maze.fill(fill_In, 0, cellCount - 1);
-
-      let augWidth = this.#width + (this.#width % 4);
-      let augHeight = this.#height + (this.#height % 4);
-      const walls = new Uint8Array(augWidth * augHeight);
-
-      let wallIndex = 0;
-      for(let y = 0; y < this.#height; y += 2)
-      {
-        for(let x = 0; x < this.#width; x += 2)
-        {
-          walls.set([maze[this.#width * y + x]], wallIndex);
-          walls.set([maze[(this.#width * (y + 1)) + x + 1]], wallIndex + 1);
-          wallIndex += 2;
-        }
-      }
+      /** @type cell[] */
+      const maze = this.buildCellArray()
+      const mazeWalls = this.pack(maze);
+      
       if(!this.#wallSet)
-        this.#wallSet = this.#rend.bufferAlloc("Wall Set", walls.byteLength, this.#rend.bufferType.storage);
-      this.#rend.bufferWrite(this.#wallSet, 0, walls);
+        this.#wallSet = this.#rend.bufferAlloc("Wall Set", mazeWalls.byteLength, this.#rend.bufferType.storage);
+      this.#rend.bufferWrite(this.#wallSet, 0, mazeWalls);
 
       this.#lineCount = (4 * this.#height * this.#width);
       if(!this.#lineList)
         this.#lineList = this.#rend.bufferAlloc("Line list", this.#lineCount * 2, this.#rend.bufferType.index);
     }
 
-    build()
+    /** @returns {cell[]} cellArray */
+    buildCellArray()
     {
-
+      /** @type {cell} */
+      let defaultCell = {N:true, S:true, E:true, W:true};
+      let cellCount = this.#width * this.#height;
+      let cellArray = new Array();
+      for(let i = 0; i < cellCount; i++)
+        cellArray.push(defaultCell);
+      return cellArray;
     }
 
-    pack()
+    /**
+     * @param {cell[]} cellArray_In
+     * @returns {Uint8Array} wallArray
+     */
+    pack(cellArray_In)
     {
+      let cellCount = this.#width * this.#height;
+      let wallArray = new Uint8Array(cellCount / 2);
+      for(let i = 0; i < cellCount / 2; i++)
+      {
+        // TODO: Make this into a goddamned compute shader, this is the worst...
+        let c = i * 2;
+        wallArray[i] |= (cellArray_In[c].N * 1);
+        wallArray[i] |= (cellArray_In[c].S * 2);
+        wallArray[i] |= (cellArray_In[c].E * 4);
+        wallArray[i] |= (cellArray_In[c].W * 8);
 
+        wallArray[i] |= (cellArray_In[c + 1].N * 16);
+        wallArray[i] |= (cellArray_In[c + 1].S * 32);
+        wallArray[i] |= (cellArray_In[c + 1].E * 64);
+        wallArray[i] |= (cellArray_In[c + 1].W * 128);
+      }
+      return wallArray;
     }
 
     setLines()

@@ -10,12 +10,6 @@ Application {
     /** @type Maze */
     #maze = null;
 
-    /** @type number */
-    #cellWidth = 64;
-
-    /** @type number */
-    #cellHeight = 64;
-
     /** @type HTMLElement */
     #numberBox = null;
 
@@ -31,7 +25,7 @@ Application {
         this.#maze.draw();
         return;
     }
-
+    // TODO: Strip this when mazes are implemented.
     /** @param {KeyboardEvent} b_Input */
     input(b_Input)
     {
@@ -44,15 +38,18 @@ Application {
         return;
     }
 
-    /** @param {function} pfnButtonCallback_In */
-    async init(pfnButtonCallback_In)
+    /**
+     * @param {number} cellWidth_In
+     * @param {number} cellHeight_In  
+     * @param {function} pfnButtonCallback_In */
+    async init(cellWidth_In, cellHeight_In, pfnButtonCallback_In)
     {
         this.#maze = new Maze();
         const header = document.getElementById('head');
         const title = document.createElement('title');
                         
         try {
-          await this.#maze.init(this.#cellWidth, this.#cellHeight);
+          await this.#maze.init(cellWidth_In, cellHeight_In);
           title.innerText = "Maze";
           header.appendChild(title);
         } catch(e) {
@@ -60,7 +57,7 @@ Application {
           header.appendChild(title);
           this.#l_Kill(`Fatal error:/n${e}`);
         };
-
+         // TODO: Strip this when mazes are implemented.
         this.#numberBox = document.createElement("input");
         this.#numberBox.type = "number";
         this.#numberBox.min = "0";
