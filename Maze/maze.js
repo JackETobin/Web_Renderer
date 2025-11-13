@@ -130,7 +130,7 @@ export class Maze
       /** @type cell[] */
       const maze = this.buildCellArray()
       const mazeWalls = this.pack(maze);
-      
+
       if(!this.#wallSet)
         this.#wallSet = this.#rend.bufferAlloc("Wall Set", mazeWalls.byteLength, this.#rend.bufferType.storage);
       this.#rend.bufferWrite(this.#wallSet, 0, mazeWalls);
@@ -144,7 +144,7 @@ export class Maze
     buildCellArray()
     {
       /** @type {cell} */
-      let defaultCell = {N:true, S:true, E:true, W:true};
+      let defaultCell = {N:true, S:true, E:true, W:false};
       let cellCount = this.#width * this.#height;
       let cellArray = new Array();
       for(let i = 0; i < cellCount; i++)

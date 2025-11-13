@@ -9,7 +9,7 @@ async function
 main(api)
 {
   l_App = new Application();
-  await l_App.init(ButtonCallback);
+  await l_App.init(64, 64, ButtonCallback);
 }
 
 function
